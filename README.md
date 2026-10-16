@@ -4,7 +4,6 @@ import csv
 
 API_KEY = "0ba17b3e2823c7d269acc62440fb42da"
 
-# A curated list of interesting IP addresses to query
 targets = {
     "University of Florida": "128.227.19.86",
     "Google Public DNS": "8.8.8.8",
@@ -12,7 +11,6 @@ targets = {
     "Apple Server": "17.253.144.10"
 }
 
-# List to hold processed data for saving later
 processed_data = []
 
 print("=" * 60)
@@ -60,11 +58,10 @@ for name, ip_address in targets.items():
     except requests.exceptions.RequestException as e:
         print(f"Connection error for {name}: {e}")
 
-# Save the extracted and processed data to a CSV file (Fulfills the "save" requirement)
+
 csv_filename = "ip_geolocation_report.csv"
 csv_columns = ["Target Name", "IP Address", "City", "Region", "Country", "Latitude", "Longitude"]
 
-try:
     with open(csv_filename, mode="w", newline="", encoding="utf-8") as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=csv_columns)
         writer.writeheader()
