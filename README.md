@@ -2,9 +2,6 @@
 import requests
 import csv
 
-# Your ipstack API key
-# Note: For your final public GitHub repository, it is best practice to load this 
-# from an environment variable or keep it in a separate file (e.g., config.py)!
 API_KEY = "0ba17b3e2823c7d269acc62440fb42da"
 
 # A curated list of interesting IP addresses to query
