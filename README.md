@@ -1,8 +1,14 @@
 # Problem-Set-4
+import os
+import sys
 import requests
 import csv
 
-API_KEY = "0ba17b3e2823c7d269acc62440fb42da"
+# Read API key from environment variable (do NOT hardcode in source)
+API_KEY = os.getenv("IPSTACK_API_KEY")
+if not API_KEY:
+    print("Error: set the IPSTACK_API_KEY environment variable (do NOT commit your API key).")
+    sys.exit(1)
 
 targets = {
     "University of Florida": "128.227.19.86",
@@ -18,55 +24,56 @@ print("       IPSTACK API GEOLOCATION & ANALYSIS REPORT")
 print("=" * 60 + "\n")
 
 for name, ip_address in targets.items():
-    url = f"http://api.ipstack.com/{ip_address}?access_key={API_KEY}"
-    
+    url = f"https://api.ipstack.com/{ip_address}?access_key={API_KEY}"
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
-        
-        # Check if the API returned an error
-        if "success" in data and data["success"] == False:
-            print(f"[{name}] API Error: {data['error']['info']}")
-        else:
-            # Extract specific parts of the returned data (Beyond just raw print)
-            ip = data.get("ip")
-            city = data.get("city", "Unknown")
-            region = data.get("region_name", "Unknown")
-            country = data.get("country_name", "Unknown")
-            latitude = data.get("latitude")
-            longitude = data.get("longitude")
-            
-            # Display the processed data nicely in the console
-            print(f"Target Name : {name}")
-            print(f"IP Address  : {ip}")
-            print(f"Location    : {city}, {region}, {country}")
-            print(f"Coordinates : Latitude {latitude}, Longitude {longitude}")
-            print("-" * 60)
-            
-            # Append the structured data for our CSV export
-            processed_data.append({
-                "Target Name": name,
-                "IP Address": ip,
-                "City": city,
-                "Region": region,
-                "Country": country,
-                "Latitude": latitude,
-                "Longitude": longitude
-            })
-            
     except requests.exceptions.RequestException as e:
-        print(f"Connection error for {name}: {e}")
+        print(f"Connection error for {name} ({ip_address}): {e}")
+        continue
+    except ValueError:
+        print(f"Invalid JSON returned for {name} ({ip_address}).")
+        continue
 
+    # Handle API-level error (ipstack returns {"success": false, "error": {...}} on failure)
+    if data.get("success") is False:
+        info = data.get("error", {}).get("info", "Unknown API error")
+        print(f"[{name}] API Error: {info}")
+        continue
 
+    ip = data.get("ip", ip_address)
+    city = data.get("city") or "Unknown"
+    region = data.get("region_name") or "Unknown"
+    country = data.get("country_name") or "Unknown"
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+
+    print(f"Target Name : {name}")
+    print(f"IP Address  : {ip}")
+    print(f"Location    : {city}, {region}, {country}")
+    print(f"Coordinates : Latitude {latitude}, Longitude {longitude}")
+    print("-" * 60)
+
+    processed_data.append({
+        "Target Name": name,
+        "IP Address": ip,
+        "City": city,
+        "Region": region,
+        "Country": country,
+        "Latitude": latitude,
+        "Longitude": longitude
+    })
+
+# Write CSV once after processing all targets
 csv_filename = "ip_geolocation_report.csv"
 csv_columns = ["Target Name", "IP Address", "City", "Region", "Country", "Latitude", "Longitude"]
 
+try:
     with open(csv_filename, mode="w", newline="", encoding="utf-8") as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=csv_columns)
         writer.writeheader()
-        for row in processed_data:
-            writer.writerow(row)
+        writer.writerows(processed_data)
     print(f"\n[Success] Processed data successfully saved to {csv_filename}!")
-except IOError:
-    print("\n[Error] Failed to save CSV file.")
+except IOError as e:
+    print(f"\n[Error] Failed to save CSV file: {e}")
